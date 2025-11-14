@@ -88,10 +88,8 @@ genetic_data_explorer/
 ## APIs (Planned)
 
 * **FAVOR API** – Functional annotation of variants
-* **GTEx API** – Gene expression data
+* **GTEx API** – Gene expression data： I remove this API because it returns tissue metadata instead of variant queries, and it requires Ensembl Gene IDs (like ENSG00000130203) instead of gene symbols like "APOE", and specific variant formats instead of rsIDs.
 * **AlphaGenome API** – Variant and functional annotations
-
-> Note: add API keys / rate-limit handling and caching when integrating.
 
 ---
 

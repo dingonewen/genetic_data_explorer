@@ -1,0 +1,9 @@
+{
+  "variant": "rs429358",
+  "gene": "APOE",
+  "annotations": {
+    "FAVOR_score": 0.97,
+    "Enhancer": "brain_enhancer",
+    "expression_GTEx": "high"
+  }
+}
