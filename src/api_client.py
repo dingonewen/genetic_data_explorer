@@ -139,6 +139,111 @@ class GeneticDataAPIClient:
             print(f"MyVariant API exception: {e}")
             return None
     
+    def query_gene_to_rsid(self, gene_symbol: str) -> Optional[str]:
+        """
+        Query MyVariant.info to find the most clinically relevant variant for a gene
+
+        Args:
+            gene_symbol: Gene symbol (e.g., 'APOE', 'BRCA1')
+
+        Returns:
+            rsID of the most relevant variant or None if not found
+        """
+        try:
+            # First, try a simple predefined mapping for common genes
+            GENE_MAPPING = {
+                'APOE': 'rs429358',      # Alzheimer's disease risk
+                'BRCA1': 'rs80357906',   # Breast cancer pathogenic
+                'BRCA2': 'rs80359550',   # Breast cancer pathogenic
+                'TP53': 'rs28934576',    # Li-Fraumeni syndrome
+                'CFTR': 'rs113993960',   # Cystic fibrosis
+                'HBB': 'rs334',          # Sickle cell disease
+                'MTHFR': 'rs1801133',    # Folate metabolism
+                'F5': 'rs6025',          # Factor V Leiden
+                'HFE': 'rs1800562',      # Hemochromatosis
+                'LDLR': 'rs28942080'     # Familial hypercholesterolemia
+            }
+
+            gene_upper = gene_symbol.upper()
+            if gene_upper in GENE_MAPPING:
+                result = GENE_MAPPING[gene_upper]
+                print(f"[GENE QUERY] Found predefined variant for {gene_upper}: {result}")
+                return result
+
+            # If not in predefined list, try API query
+            url = f"{self.myvariant_base}/query"
+            params = {
+                'q': f'cadd.gene.genename:{gene_upper}',
+                'fields': 'dbsnp.rsid,clinvar.clinical_significance',
+                'size': 20
+            }
+
+            response = requests.get(url, params=params, timeout=self.timeout)
+
+            if response.status_code == 200:
+                data = response.json()
+                hits = data.get('hits', [])
+
+                if not hits:
+                    print(f"[GENE QUERY] No variants found for gene: {gene_symbol}")
+                    return None
+
+                # Priority: Pathogenic > Likely pathogenic > Other
+                pathogenic_variants = []
+                likely_pathogenic = []
+                other_variants = []
+
+                for hit in hits:
+                    rsid = hit.get('dbsnp', {}).get('rsid')
+                    if not rsid:
+                        continue
+
+                    # Get clinical significance
+                    significance_raw = hit.get('clinvar', {}).get('clinical_significance', '')
+
+                    # Handle both string and list formats
+                    if isinstance(significance_raw, list):
+                        significance = ' '.join(significance_raw).lower()
+                    else:
+                        significance = str(significance_raw).lower()
+
+                    if 'pathogenic' in significance and 'likely' not in significance:
+                        pathogenic_variants.append(rsid)
+                    elif 'likely pathogenic' in significance:
+                        likely_pathogenic.append(rsid)
+                    else:
+                        other_variants.append(rsid)
+
+                # Return highest priority variant
+                if pathogenic_variants:
+                    result = pathogenic_variants[0]
+                    print(f"[GENE QUERY] Found pathogenic variant for {gene_symbol}: {result}")
+                    return result
+                elif likely_pathogenic:
+                    result = likely_pathogenic[0]
+                    print(f"[GENE QUERY] Found likely pathogenic variant for {gene_symbol}: {result}")
+                    return result
+                elif other_variants:
+                    result = other_variants[0]
+                    print(f"[GENE QUERY] Found variant for {gene_symbol}: {result}")
+                    return result
+                else:
+                    # Fallback: return first hit with rsid
+                    for hit in hits:
+                        rsid = hit.get('dbsnp', {}).get('rsid')
+                        if rsid:
+                            print(f"[GENE QUERY] Found variant (no clinical data) for {gene_symbol}: {rsid}")
+                            return rsid
+
+                    return None
+            else:
+                print(f"[GENE QUERY] API error: {response.status_code}")
+                return None
+
+        except Exception as e:
+            print(f"[GENE QUERY EXCEPTION] {type(e).__name__}: {str(e)}")
+            return None
+
     def get_ensembl_data(self, rsid: str) -> Optional[Dict]:
         """Get variant data from Ensembl REST API"""
         try:

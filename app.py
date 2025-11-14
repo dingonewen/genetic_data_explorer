@@ -1,7 +1,7 @@
-
 import streamlit as st
 import sys
 import os
+import re
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -103,11 +103,48 @@ st.markdown("""
         color: #61afef !important;
     }
 
+    /* Help tab (5th tab) - Red color */
+    .stTabs [data-baseweb="tab-list"] button:nth-child(5) {
+        color: #e06c75 !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] button:nth-child(5)[aria-selected="true"] {
+        color: #e06c75 !important;
+        font-weight: bold !important;
+    }
+
     /* Sidebar small caption text */
     .sidebar-caption {
         font-size: 0.75rem !important;
         color: #5c6370 !important;
         line-height: 1.2 !important;
+    }
+
+    /* Smaller metric labels and values */
+    [data-testid="stMetricLabel"] {
+        font-size: 0.85rem !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        font-size: 1.1rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+        display: block !important;
+    }
+
+    /* Metric hover to show full content */
+    [data-testid="stMetric"]:hover [data-testid="stMetricValue"] {
+        overflow: visible !important;
+        white-space: normal !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e06c75 !important;
+        padding: 4px 8px !important;
+        border-radius: 4px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+        z-index: 1000 !important;
+        position: relative !important;
     }
     
 
@@ -182,16 +219,16 @@ st.sidebar.metric("APIs Integrated", "3")  # Changed from 2 to 3
 st.sidebar.metric("Data Fields", "200+")   # Updated
 
 # Main search section
-st.subheader("Variant ID Search")
+st.subheader("Variant Annotation Search")
 
 # Search input
 col1, col2 = st.columns([4, 1])
 
 with col1:
     variant_id = st.text_input(
-        "Variant rsID",
+        "Variant rsID or Gene Symbol",
         value="",
-        placeholder="e.g., rs7412",
+        placeholder="type in Variant rsID or Gene Symbol",
         label_visibility="collapsed"
     )
 
@@ -200,7 +237,7 @@ with col2:
 
 # Quick select examples
 st.caption("Quick examples:")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
 with col1:
     if st.button("rs429358", use_container_width=True):
@@ -213,11 +250,21 @@ with col2:
         search_button = True
 
 with col3:
-    if st.button("rs3865444", use_container_width=True):
-        variant_id = "rs3865444"
+    if st.button("APOE", use_container_width=True):
+        variant_id = "APOE"
         search_button = True
 
 with col4:
+    if st.button("BRCA1", use_container_width=True):
+        variant_id = "BRCA1"
+        search_button = True
+
+with col5:
+    if st.button("TP53", use_container_width=True):
+        variant_id = "TP53"
+        search_button = True
+
+with col6:
     if st.button("Clear", use_container_width=True):
         variant_id = ""
 
@@ -478,12 +525,36 @@ def fetch_variant_data_cached(variant_id: str):
 
 # Search functionality
 if search_button and variant_id:
-    st.subheader(f"Results for: {variant_id}")
+    # Determine if input is rsID or gene symbol
+    is_rsid = bool(re.match(r'^rs\d+$', variant_id.strip(), re.IGNORECASE))
+
+    search_query = variant_id.strip()
+    actual_rsid = None
+    display_title = None
+
+    if not is_rsid:
+        # Input is likely a gene symbol, convert to rsID
+        gene_name = search_query.upper()
+        st.info(f"Searching for gene symbol: {gene_name}")
+        with st.spinner(f"Finding representative variant for gene {gene_name}..."):
+            actual_rsid = client.query_gene_to_rsid(search_query)
+
+        if actual_rsid:
+            st.success(f"Found variant {actual_rsid} for gene {gene_name}")
+            display_title = f"{gene_name} ({actual_rsid})"
+        else:
+            st.error(f"No variants found for gene: {gene_name}")
+            st.stop()
+    else:
+        actual_rsid = search_query
+        display_title = actual_rsid
+
+    st.subheader(f"Results for: {display_title}")
 
     if use_real_api:
         # Use Real API with caching
-        with st.spinner(f"Fetching data for {variant_id}..."):
-            data = fetch_variant_data_cached(variant_id)
+        with st.spinner(f"Fetching data for {actual_rsid}..."):
+            data = fetch_variant_data_cached(actual_rsid)
 
         # Show API data source status
         col1, col2, col3 = st.columns(3)
@@ -558,8 +629,19 @@ if search_button and variant_id:
 
                             if mv['diseases']:
                                 st.markdown("**Associated Diseases:**")
-                                for disease in mv['diseases']:
-                                    st.markdown(f"- {disease}")
+                                # Show first 3 diseases, rest in expander if more than 3
+                                diseases_list = mv['diseases']
+                                if len(diseases_list) <= 3:
+                                    for disease in diseases_list:
+                                        st.markdown(f"- {disease}")
+                                else:
+                                    # Show first 3
+                                    for disease in diseases_list[:3]:
+                                        st.markdown(f"- {disease}")
+                                    # Rest in expander
+                                    with st.expander(f"Show {len(diseases_list) - 3} more diseases"):
+                                        for disease in diseases_list[3:]:
+                                            st.markdown(f"- {disease}")
 
                     # Add Ensembl data section
                     if data['ensembl']:
@@ -583,7 +665,14 @@ if search_button and variant_id:
                         # Evidence sources
                         if ens['evidence']:
                             st.markdown("**Evidence Sources:**")
-                            st.caption(", ".join(ens['evidence']))
+                            evidence_list = ens['evidence']
+                            # If more than 5 sources, use expander
+                            if len(evidence_list) <= 3:
+                                st.caption(", ".join(evidence_list))
+                            else:
+                                st.caption(", ".join(evidence_list[:3]) + f", ... (+{len(evidence_list) - 3} more)")
+                                with st.expander("Show all evidence sources"):
+                                    st.caption(", ".join(evidence_list))
 
                         # Clinical significance from Ensembl
                         if ens['clinical_significance']:
@@ -739,6 +828,7 @@ if search_button and variant_id:
                         mime="text/csv",
                         use_container_width=True
                     )
+
             # Tab 5: Help
             with tab5:
                 st.markdown("### User Guide")
@@ -748,7 +838,21 @@ if search_button and variant_id:
 
                 st.markdown("### Searching for Variants")
                 st.markdown("""
-                Enter a variant rsID in the search box (e.g., rs429358, rs7412) and click Search.
+                **Two ways to search:**
+
+                **1. By rsID** (Reference SNP ID)
+                - Enter an rsID like rs429358, rs7412
+                - Click Search to fetch data directly
+
+                **2. By Gene Symbol**
+                - Enter a gene name like APOE, BRCA1, TP53
+                - The app automatically finds the most clinically relevant variant for that gene
+                - Prioritizes pathogenic/likely pathogenic variants when available
+
+                **Supported gene symbols**:
+                - Predefined: APOE, BRCA1, BRCA2, TP53, CFTR, HBB, MTHFR, F5, HFE, LDLR
+                - Other genes via API fallback (when available)
+
                 The application fetches data from 3 public APIs simultaneously.
                 Results are cached for 1 hour to improve performance.
                 """)
@@ -817,12 +921,27 @@ if search_button and variant_id:
 
                 st.markdown("### Variant Identifiers")
                 st.markdown("""
-                An rsID (Reference SNP cluster ID) is a unique identifier assigned by dbSNP to genetic variants.
+                **rsID (Reference SNP cluster ID)**
 
-                **Common examples**:
+                A unique identifier assigned by dbSNP to genetic variants.
+
+                Examples:
                 - rs429358: APOE ε4 allele (Alzheimer disease risk factor)
                 - rs7412: APOE ε2 allele (protective allele)
                 - rs1815739: ACTN3 R577X (athletic performance variant)
+
+                **Gene Symbol**
+
+                Standard gene names from HGNC (HUGO Gene Nomenclature Committee).
+
+                Examples:
+                - APOE: Apolipoprotein E (maps to rs429358)
+                - BRCA1: Breast cancer type 1 susceptibility protein (maps to rs80357906)
+                - TP53: Tumor protein p53 (maps to rs28934576)
+                - CFTR: Cystic fibrosis transmembrane conductance regulator (maps to rs113993960)
+
+                When you search by gene symbol, the app automatically selects the most clinically
+                relevant variant based on ClinVar pathogenicity classifications.
                 """)
 
                 st.divider()
