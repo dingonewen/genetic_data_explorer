@@ -137,20 +137,76 @@ class GeneticDataAPIClient:
             print(f"MyVariant API exception: {e}")
             return None
     
+    def get_ensembl_data(self, rsid: str) -> Optional[Dict]:
+        """Get variant data from Ensembl REST API"""
+        try:
+            url = f"{self.ensembl_base}/variation/human/{rsid}"
+            headers = {"Content-Type": "application/json"}
+            
+            response = requests.get(url, headers=headers, timeout=self.timeout)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                result = {
+                    "variant_id": rsid,
+                    "source": "Ensembl",
+                    "name": data.get('name'),
+                    "var_class": data.get('var_class'),
+                    "most_severe_consequence": data.get('most_severe_consequence'),
+                    "clinical_significance": data.get('clinical_significance', []),
+                    "evidence": data.get('evidence', []),
+                    "synonyms": data.get('synonyms', []),
+                    "MAF": data.get('MAF'),
+                    "minor_allele": data.get('minor_allele'),
+                    "mappings": [],
+                    "raw_data": data
+                }
+                
+                mappings = data.get('mappings', [])
+                if mappings:
+                    for mapping in mappings:
+                        result['mappings'].append({
+                            "chromosome": mapping.get('seq_region_name'),
+                            "start": mapping.get('start'),
+                            "end": mapping.get('end'),
+                            "strand": mapping.get('strand'),
+                            "allele_string": mapping.get('allele_string'),
+                            "assembly": mapping.get('assembly_name'),
+                            "location": mapping.get('location')
+                        })
+                
+                return result
+            
+            elif response.status_code == 404:
+                print(f"Ensembl API: rsID {rsid} not found")
+                return None
+            else:
+                print(f"Ensembl API error: {response.status_code}")
+                return None
+            
+        except Exception as e:
+            print(f"Ensembl API exception: {e}")
+            return None
+    
+
+
+    
     def get_combined_data(self, rsid: str) -> Dict:
         """
-        Get data from both APIs and combine
+        Get data from all APIs and combine
         
         Args:
             rsid: Variant rsID (e.g., 'rs429358')
             
         Returns:
-            Dictionary with combined data from both sources
+            Dictionary with combined data from all sources
         """
         result = {
             "variant_id": rsid,
             "favor": None,
             "myvariant": None,
+            "ensembl": None,
             "success": False
         }
         
@@ -164,6 +220,12 @@ class GeneticDataAPIClient:
         myvariant_data = self.get_myvariant_data(rsid)
         if myvariant_data:
             result['myvariant'] = myvariant_data
+            result['success'] = True
+        
+        # Get Ensembl data (for genomic context)
+        ensembl_data = self.get_ensembl_data(rsid)
+        if ensembl_data:
+            result['ensembl'] = ensembl_data
             result['success'] = True
         
         return result

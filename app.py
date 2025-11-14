@@ -57,13 +57,16 @@ Functional annotation, pathogenicity scores
 
 **MyVariant.info**  
 Clinical significance, disease associations
+
+**Ensembl REST API**  
+Genomic coordinates, population frequencies
 """)
 
 # Sidebar - Stats
 st.sidebar.divider()
 st.sidebar.subheader("Quick Stats")
-st.sidebar.metric("APIs Integrated", "2")
-st.sidebar.metric("Data Fields", "184+")
+st.sidebar.metric("APIs Integrated", "3")  # Changed from 2 to 3
+st.sidebar.metric("Data Fields", "200+")   # Updated
 
 # Main search section
 st.subheader("Variant Search")
@@ -309,6 +312,36 @@ if search_button and variant_id:
                             st.markdown("**Associated Diseases:**")
                             for disease in mv['diseases']:
                                 st.markdown(f"- {disease}")
+
+                    # Add Ensembl data section
+                        if data['ensembl']:
+                            ens = data['ensembl']
+                            st.divider()
+                            st.markdown("### Genomic Context (Ensembl)")
+                            
+                            col1, col2, col3 = st.columns(3)
+                            
+                            with col1:
+                                st.metric("Variant Class", ens['var_class'] or "N/A")
+                            
+                            with col2:
+                                st.metric("Consequence", ens['most_severe_consequence'] or "N/A")
+                            
+                            with col3:
+                                if ens['mappings']:
+                                    location = ens['mappings'][0]['location']
+                                    st.metric("Location", location)
+                            
+                            # Evidence sources
+                            if ens['evidence']:
+                                st.markdown("**Evidence Sources:**")
+                                st.caption(", ".join(ens['evidence']))
+                            
+                            # Clinical significance from Ensembl
+                            if ens['clinical_significance']:
+                                with st.expander("Clinical Significance (Ensembl)"):
+                                    for sig in ens['clinical_significance']:
+                                        st.write(f"- {sig}")
                 
                 else:
                     st.warning("No data available for this variant")
@@ -384,18 +417,49 @@ if search_button and variant_id:
                             for disease in mv['diseases']:
                                 st.markdown(f"- {disease}")
             
+               # Add Ensembl detailed data
+                if data['ensembl']:
+                    ens = data['ensembl']
+                    
+                    st.markdown("### Ensembl Data")
+                    
+                    with st.expander("View Ensembl Data", expanded=False):
+                        st.markdown(f"**Name:** {ens['name']}")
+                        st.markdown(f"**Variant Class:** {ens['var_class']}")
+                        st.markdown(f"**Most Severe Consequence:** {ens['most_severe_consequence']}")
+                        
+                        if ens['mappings']:
+                            st.markdown("**Genomic Mappings:**")
+                            for mapping in ens['mappings']:
+                                st.markdown(f"- **Location:** {mapping['location']}")
+                                st.markdown(f"  - **Alleles:** {mapping['allele_string']}")
+                                st.markdown(f"  - **Assembly:** {mapping['assembly']}")
+                        
+                        if ens['evidence']:
+                            st.markdown(f"**Evidence:** {', '.join(ens['evidence'])}")
+                        
+                        if ens['clinical_significance']:
+                            st.markdown("**Clinical Significance:**")
+                            for sig in ens['clinical_significance']:
+                                st.markdown(f"- {sig}")
+                        
+                        if ens['synonyms']:
+                            st.markdown(f"**Cross-references:** {len(ens['synonyms'])} IDs")
+
             # Tab 4: Export
             with tab4:
                 st.markdown("### Data Summary Table")
                 
                 merged_data = {
-                    "Variant ID": variant_id,
-                    "Gene": data['favor']['gene'] if data['favor'] else (data['myvariant']['gene'] if data['myvariant'] else "N/A"),
-                    "Category": data['favor']['category'] if data['favor'] else "N/A",
-                    "Exonic Type": data['favor']['exonic_category'] if data['favor'] else "N/A",
-                    "Allele Frequency": data['favor']['bravo_af'] if data['favor'] else "N/A",
-                    "CADD PHRED": data['favor']['cadd_phred'] if data['favor'] else "N/A",
-                    "Clinical Significance": data['myvariant']['clinical_significance'] if data['myvariant'] else "N/A"
+                "Variant ID": variant_id,
+                "Gene": data['favor']['gene'] if data['favor'] else (data['myvariant']['gene'] if data['myvariant'] else "N/A"),
+                "Category": data['favor']['category'] if data['favor'] else "N/A",
+                "Exonic Type": data['favor']['exonic_category'] if data['favor'] else "N/A",
+                "Allele Frequency": data['favor']['bravo_af'] if data['favor'] else "N/A",
+                "CADD PHRED": data['favor']['cadd_phred'] if data['favor'] else "N/A",
+                "Clinical Significance": data['myvariant']['clinical_significance'] if data['myvariant'] else "N/A",
+                "Location (Ensembl)": data['ensembl']['mappings'][0]['location'] if data['ensembl'] and data['ensembl']['mappings'] else "N/A",
+                "Consequence": data['ensembl']['most_severe_consequence'] if data['ensembl'] else "N/A"
                 }
                 
                 df = pd.DataFrame([merged_data])
@@ -406,11 +470,14 @@ if search_button and variant_id:
                 col1, col2 = st.columns(2)
                 
                 with col1:
+ 
                     export_data = {
-                        "variant_id": variant_id,
-                        "favor": data['favor'],
-                        "myvariant": data['myvariant']
+                    "variant_id": variant_id,
+                    "favor": data['favor'],
+                    "myvariant": data['myvariant'],
+                    "ensembl": data['ensembl']  # Add Ensembl to export
                     }
+
                     json_str = json.dumps(export_data, indent=2)
                     st.download_button(
                         label="Download JSON",
