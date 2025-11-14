@@ -470,14 +470,21 @@ def create_variant_impact_chart(fv):
 
     return None
 
+# Cached API fetch function to avoid redundant requests
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def fetch_variant_data_cached(variant_id: str):
+    """Fetch variant data with caching to improve performance"""
+    return client.get_combined_data(variant_id)
+
 # Search functionality
 if search_button and variant_id:
     st.subheader(f"Results for: {variant_id}")
-    
+
     if use_real_api:
-        # Use Real API
+        # Use Real API with caching
         with st.spinner(f"Fetching data for {variant_id}..."):
-            data = client.get_combined_data(variant_id)
+            data = fetch_variant_data_cached(variant_id)
+
         # Show API data source status
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -495,11 +502,12 @@ if search_button and variant_id:
                 st.success("✓ Ensembl")
             else:
                 st.error("✗ Ensembl")
+
         st.divider()
 
         if data['success']:
             # Create tabs for organized display
-            tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Visualizations", "Detailed Data", "Export"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Overview", "Visualizations", "Detailed Data", "Export", "Help"])
             
             # Tab 1: Overview
             with tab1:
@@ -731,7 +739,126 @@ if search_button and variant_id:
                         mime="text/csv",
                         use_container_width=True
                     )
-        
+            # Tab 5: Help
+            with tab5:
+                st.markdown("### User Guide")
+                st.caption("Comprehensive documentation for variant analysis")
+
+                st.divider()
+
+                st.markdown("### Searching for Variants")
+                st.markdown("""
+                Enter a variant rsID in the search box (e.g., rs429358, rs7412) and click Search.
+                The application fetches data from 3 public APIs simultaneously.
+                Results are cached for 1 hour to improve performance.
+                """)
+
+                st.divider()
+
+                st.markdown("### Understanding Results")
+
+                with st.expander("Overview Tab", expanded=False):
+                    st.markdown("""
+                    **Basic Information**: Gene name, variant category, allele frequency
+
+                    **Pathogenicity Scores**: CADD, PolyPhen2, SIFT predictions
+
+                    **Clinical Information**: ClinVar significance and disease associations
+
+                    **Genomic Context**: Ensembl variant class, consequence, and chromosomal location
+                    """)
+
+                with st.expander("Visualizations Tab", expanded=False):
+                    st.markdown("""
+                    **Pathogenicity Prediction Chart**
+
+                    Color interpretation:
+                    - Green: Benign or Tolerated
+                    - Yellow: Uncertain significance
+                    - Red: Deleterious or Pathogenic
+
+                    **Population Allele Frequency**
+
+                    Rarity classification (ACMG guidelines):
+                    - Common (≥5%): Normal polymorphism
+                    - Low Frequency (0.5-5%): May be clinically relevant
+                    - Rare (0.05-0.5%): Potentially pathogenic
+                    - Very Rare (<0.05%): Strong disease association candidate
+
+                    **Algorithm Consensus**
+
+                    Multi-algorithm agreement summary:
+                    - Likely Pathogenic: 2+ algorithms predict damaging
+                    - Uncertain Significance: Mixed predictions
+                    - Likely Benign: Most algorithms predict tolerated
+                    """)
+
+                with st.expander("Detailed Data Tab", expanded=False):
+                    st.markdown("""
+                    Complete raw data from each API source:
+
+                    **FAVOR API**: 184+ functional annotation fields including conservation scores
+
+                    **MyVariant.info**: ClinVar clinical significance and dbSNP cross-references
+
+                    **Ensembl REST API**: Genomic coordinates, population frequencies, and evidence sources
+                    """)
+
+                with st.expander("Export Tab", expanded=False):
+                    st.markdown("""
+                    Download variant data in two formats:
+
+                    **JSON**: Complete structured data from all three APIs
+
+                    **CSV**: Summary table suitable for spreadsheet analysis
+                    """)
+
+                st.divider()
+
+                st.markdown("### Variant Identifiers")
+                st.markdown("""
+                An rsID (Reference SNP cluster ID) is a unique identifier assigned by dbSNP to genetic variants.
+
+                **Common examples**:
+                - rs429358: APOE ε4 allele (Alzheimer disease risk factor)
+                - rs7412: APOE ε2 allele (protective allele)
+                - rs1815739: ACTN3 R577X (athletic performance variant)
+                """)
+
+                st.divider()
+
+                st.markdown("### Data Sources")
+                st.markdown("""
+                This application integrates three complementary public genomics APIs:
+
+                **FAVOR API** ([docs.genohub.org](https://docs.genohub.org/))
+                - Comprehensive functional annotation database
+                - Pathogenicity scores and conservation metrics
+
+                **MyVariant.info** ([myvariant.info](https://myvariant.info/))
+                - ClinVar clinical significance data
+                - Disease-variant associations
+
+                **Ensembl REST API** ([rest.ensembl.org](https://rest.ensembl.org/))
+                - Authoritative genomic coordinates
+                - Population frequency data
+
+                All interpretations follow ACMG variant classification guidelines.
+                """)
+
+                st.divider()
+
+                st.markdown("### Usage Notes")
+                st.markdown("""
+                **API Status Indicators**: Check marks (✓/✗) show which APIs successfully returned data for your query.
+
+                **Caching**: Search results are cached for one hour. Refresh the page to clear cached data.
+
+                **ClinVar Data**: Not all variants have clinical significance annotations. This is expected for common benign polymorphisms.
+
+                **Mock Data Mode**: Toggle "Use Real API" off in the sidebar to explore the interface with sample data.
+                """)
+
         else:
             st.error(f"Failed to retrieve data for {variant_id}")
             st.info("Try using mock data mode or verify the variant ID is valid")
