@@ -42,7 +42,13 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background-color: #e8e8e8 !important;
     }
-
+            
+    [data-testid="stIconMaterial"] {
+        text-indent: -9999px !important;
+        display: inline-block !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
             
 
 
@@ -102,6 +108,7 @@ st.markdown("""
         color: #5c6370 !important;
         line-height: 1.2 !important;
     }
+    
 
     /* Gene icon positioning - next to main title */
     .gene-icon {
@@ -182,7 +189,7 @@ col1, col2 = st.columns([4, 1])
 with col1:
     variant_id = st.text_input(
         "Variant rsID",
-        value="rs429358",
+        value="",
         placeholder="e.g., rs429358, rs7412",
         label_visibility="collapsed"
     )
@@ -364,7 +371,7 @@ if search_button and variant_id:
         # Use Real API
         with st.spinner(f"Fetching data for {variant_id}..."):
             data = client.get_combined_data(variant_id)
-        
+
         if data['success']:
             # Create tabs for organized display
             tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Visualizations", "Detailed Data", "Export"])
@@ -490,6 +497,7 @@ if search_button and variant_id:
             # Tab 3: Detailed Data
 
             with tab3:
+
                 if data['favor']:
                     fv = data['favor']
 
