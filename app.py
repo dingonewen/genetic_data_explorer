@@ -1,3 +1,4 @@
+
 import streamlit as st
 import sys
 import os
@@ -190,7 +191,7 @@ with col1:
     variant_id = st.text_input(
         "Variant rsID",
         value="",
-        placeholder="e.g., rs429358, rs7412",
+        placeholder="e.g., rs7412",
         label_visibility="collapsed"
     )
 
@@ -224,144 +225,250 @@ st.divider()
 
 # Visualization functions
 def create_pathogenicity_chart(fv):
-    """Create bar chart for pathogenicity scores"""
-    scores = []
-    labels = []
-    colors = []
-    
+    """Create enhanced pathogenicity scores chart with thresholds"""
+    scores_data = []
+
+    # CADD PHRED (>20 deleterious, >30 highly deleterious)
     if fv['cadd_phred']:
-        scores.append(fv['cadd_phred'])
-        labels.append('CADD PHRED')
-        colors.append('#e06c75')
-    
+        interpretation = 'Benign' if fv['cadd_phred'] < 20 else ('Deleterious' if fv['cadd_phred'] < 30 else 'Highly Deleterious')
+        color = '#98c379' if fv['cadd_phred'] < 20 else ('#e5c07b' if fv['cadd_phred'] < 30 else '#e06c75')
+        scores_data.append({
+            'name': 'CADD PHRED',
+            'score': fv['cadd_phred'],
+            'normalized': min(fv['cadd_phred'] / 40, 1),  # Normalize to 0-1
+            'interpretation': interpretation,
+            'color': color,
+            'threshold': 20
+        })
+
+    # PolyPhen2 (>0.85 probably damaging, 0.15-0.85 possibly damaging)
     if fv['polyphen2_hdiv_score'] is not None:
-        scores.append(fv['polyphen2_hdiv_score'])
-        labels.append('PolyPhen2 HDIV')
-        colors.append('#61afef')
-    
-    if fv['polyphen2_hvar_score'] is not None:
-        scores.append(fv['polyphen2_hvar_score'])
-        labels.append('PolyPhen2 HVAR')
-        colors.append('#56b6c2')
-    
+        interpretation = 'Benign' if fv['polyphen2_hdiv_score'] < 0.15 else ('Possibly Damaging' if fv['polyphen2_hdiv_score'] < 0.85 else 'Probably Damaging')
+        color = '#98c379' if fv['polyphen2_hdiv_score'] < 0.15 else ('#e5c07b' if fv['polyphen2_hdiv_score'] < 0.85 else '#e06c75')
+        scores_data.append({
+            'name': 'PolyPhen2',
+            'score': fv['polyphen2_hdiv_score'],
+            'normalized': fv['polyphen2_hdiv_score'],
+            'interpretation': interpretation,
+            'color': color,
+            'threshold': 0.85
+        })
+
+    # SIFT (<0.05 deleterious, NOTE: SIFT is reverse - lower is worse)
     if fv['sift_score']:
-        scores.append(fv['sift_score'])
-        labels.append('SIFT')
-        colors.append('#98c379')
-    
-    if scores:
-        fig = go.Figure(data=[
-            go.Bar(
-                x=labels,
-                y=scores,
-                marker_color=colors,
-                text=[f"{s:.3f}" if s else "N/A" for s in scores],
-                textposition='auto',
-            )
-        ])
-        
+        interpretation = 'Deleterious' if fv['sift_score'] < 0.05 else 'Tolerated'
+        color = '#e06c75' if fv['sift_score'] < 0.05 else '#98c379'
+        scores_data.append({
+            'name': 'SIFT',
+            'score': fv['sift_score'],
+            'normalized': 1 - fv['sift_score'],  # Invert for visualization (higher = worse)
+            'interpretation': interpretation,
+            'color': color,
+            'threshold': 0.95  # Inverted threshold line
+        })
+
+    if scores_data:
+        fig = go.Figure()
+
+        # Add bars
+        for item in scores_data:
+            fig.add_trace(go.Bar(
+                name=item['name'],
+                x=[item['name']],
+                y=[item['normalized']],
+                marker_color=item['color'],
+                text=f"{item['score']:.3f}<br>{item['interpretation']}",
+                textposition='outside',
+                hovertemplate=f"<b>{item['name']}</b><br>Score: {item['score']:.3f}<br>{item['interpretation']}<extra></extra>"
+            ))
+
+        # Add threshold line
+        fig.add_hline(y=0.5, line_dash="dash", line_color="#5c6370",
+                      annotation_text="Threshold", annotation_position="right")
+
         fig.update_layout(
-            title="Pathogenicity Scores Comparison",
-            xaxis_title="Score Type",
-            yaxis_title="Score Value",
-            plot_bgcolor='rgba(0,0,0,0)',
+            title="Pathogenicity Prediction (Color: Green=Benign, Yellow=Uncertain, Red=Deleterious)",
+            xaxis_title="Prediction Algorithm",
+            yaxis_title="Normalized Pathogenicity Score",
+            yaxis=dict(range=[0, 1.2]),
+            showlegend=False,
+            plot_bgcolor='rgba(250,250,250,0.5)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#abb2bf'),
-            height=400
+            font=dict(color='#2c3e50'),
+            height=450
         )
-        
+
         return fig
     return None
 
 def create_allele_frequency_chart(fv):
-    """Create gauge chart for allele frequency"""
+    """Create allele frequency visualization with rarity classification"""
     if fv['bravo_af']:
         af_percent = fv['bravo_af'] * 100
-        
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=af_percent,
-            domain={'x': [0, 1], 'y': [0, 1]},
-            title={'text': "Allele Frequency (%)", 'font': {'color': '#abb2bf'}},
-            number={'suffix': "%", 'font': {'color': '#98c379'}},
-            gauge={
-                'axis': {'range': [None, 100], 'tickcolor': '#abb2bf'},
-                'bar': {'color': "#61afef"},
-                'steps': [
-                    {'range': [0, 1], 'color': "#21252b"},
-                    {'range': [1, 5], 'color': "#2c313a"},
-                    {'range': [5, 50], 'color': "#3e4451"}
-                ],
-                'threshold': {
-                    'line': {'color': "#e06c75", 'width': 4},
-                    'thickness': 0.75,
-                    'value': af_percent
-                }
-            }
+
+        # Classify variant by rarity (ACMG guidelines)
+        if af_percent >= 5:
+            category = "Common"
+            color = '#98c379'
+            description = "Present in ≥5% of population"
+        elif af_percent >= 0.5:
+            category = "Low Frequency"
+            color = '#61afef'
+            description = "Present in 0.5-5% of population"
+        elif af_percent >= 0.05:
+            category = "Rare"
+            color = '#e5c07b'
+            description = "Present in 0.05-0.5% of population"
+        else:
+            category = "Very Rare"
+            color = '#e06c75'
+            description = "Present in <0.05% of population"
+
+        # Create horizontal bar showing AF position on spectrum
+        fig = go.Figure()
+
+        # Background spectrum
+        fig.add_trace(go.Bar(
+            x=[100],
+            y=['Allele Frequency'],
+            orientation='h',
+            marker=dict(color='#e8e8e8'),
+            showlegend=False,
+            hoverinfo='skip'
         ))
-        
+
+        # Actual frequency bar
+        fig.add_trace(go.Bar(
+            x=[af_percent],
+            y=['Allele Frequency'],
+            orientation='h',
+            marker=dict(color=color),
+            text=f'{af_percent:.4f}%<br>{category}',
+            textposition='outside',
+            showlegend=False,
+            hovertemplate=f'<b>Allele Frequency</b><br>{af_percent:.4f}%<br>{category}<br>{description}<extra></extra>'
+        ))
+
+        # Add threshold markers
+        thresholds = [
+            (0.05, 'Rare threshold'),
+            (0.5, 'Low freq threshold'),
+            (5, 'Common threshold')
+        ]
+
+        for threshold, label in thresholds:
+            fig.add_vline(x=threshold, line_dash="dot", line_color="#5c6370", line_width=1)
+
         fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
+            title=f"Population Allele Frequency: {category}",
+            xaxis=dict(
+                title="Frequency (%)",
+                type='log',  # Log scale to better show rare variants
+                range=[-3, 2],  # 0.001% to 100%
+                gridcolor='#d0d0d0'
+            ),
+            yaxis=dict(showticklabels=False),
+            plot_bgcolor='rgba(250,250,250,0.5)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#abb2bf'),
-            height=300
+            font=dict(color='#2c3e50'),
+            height=300,
+            barmode='overlay'
         )
-        
+
         return fig
     return None
 
-def create_annotation_quality_chart(fv):
-    """Create radar chart for annotation completeness"""
-    categories = []
-    values = []
-    
-    # Check which annotations are available
-    annotations = {
-        'CADD': fv['cadd_phred'],
-        'PolyPhen2': fv['polyphen2_hdiv_score'],
-        'SIFT': fv['sift_score'],
-        'Frequency': fv['bravo_af'],
-        'Exonic Info': fv['exonic_info']
-    }
-    
-    for key, value in annotations.items():
-        categories.append(key)
-        values.append(1 if value else 0)
-    
-    fig = go.Figure(data=go.Scatterpolar(
-        r=values,
-        theta=categories,
-        fill='toself',
-        fillcolor='rgba(97, 175, 239, 0.3)',
-        line=dict(color='#61afef', width=2)
-    ))
-    
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, 1],
-                tickmode='array',
-                tickvals=[0, 1],
-                ticktext=['Missing', 'Available'],
-                gridcolor='#3e4451',
-                color='#abb2bf'
-            ),
-            angularaxis=dict(
-                gridcolor='#3e4451',
-                color='#abb2bf'
-            ),
-            bgcolor='rgba(0,0,0,0)'
-        ),
-        showlegend=False,
-        title="Annotation Completeness",
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='#abb2bf'),
-        height=400
-    )
-    
-    return fig
+def create_variant_impact_chart(fv):
+    """Create variant functional impact summary"""
+    # Collect all prediction results
+    predictions = []
+
+    # CADD
+    if fv['cadd_phred']:
+        if fv['cadd_phred'] >= 30:
+            predictions.append(('CADD', 'Highly Deleterious', 2, '#e06c75'))
+        elif fv['cadd_phred'] >= 20:
+            predictions.append(('CADD', 'Deleterious', 1, '#e5c07b'))
+        else:
+            predictions.append(('CADD', 'Benign', 0, '#98c379'))
+
+    # PolyPhen2
+    if fv['polyphen2_hdiv_score'] is not None:
+        if fv['polyphen2_hdiv_score'] >= 0.85:
+            predictions.append(('PolyPhen2', 'Probably Damaging', 2, '#e06c75'))
+        elif fv['polyphen2_hdiv_score'] >= 0.15:
+            predictions.append(('PolyPhen2', 'Possibly Damaging', 1, '#e5c07b'))
+        else:
+            predictions.append(('PolyPhen2', 'Benign', 0, '#98c379'))
+
+    # SIFT
+    if fv['sift_score']:
+        if fv['sift_score'] < 0.05:
+            predictions.append(('SIFT', 'Deleterious', 2, '#e06c75'))
+        else:
+            predictions.append(('SIFT', 'Tolerated', 0, '#98c379'))
+
+    if predictions:
+        # Calculate consensus
+        impact_scores = [p[2] for p in predictions]
+        avg_impact = sum(impact_scores) / len(impact_scores)
+
+        if avg_impact >= 1.5:
+            consensus = "Likely Pathogenic"
+            consensus_color = '#e06c75'
+        elif avg_impact >= 0.7:
+            consensus = "Uncertain Significance"
+            consensus_color = '#e5c07b'
+        else:
+            consensus = "Likely Benign"
+            consensus_color = '#98c379'
+
+        # Create heatmap-style visualization
+        algorithms = [p[0] for p in predictions]
+        predictions_text = [p[1] for p in predictions]
+        impact_values = [p[2] for p in predictions]
+        colors = [p[3] for p in predictions]
+
+        fig = go.Figure()
+
+        # Add bars for each prediction
+        for i, (algo, pred, val, col) in enumerate(predictions):
+            fig.add_trace(go.Bar(
+                x=[algo],
+                y=[1],
+                name=algo,
+                marker_color=col,
+                text=pred,
+                textposition='inside',
+                textfont=dict(color='white', size=12),
+                hovertemplate=f'<b>{algo}</b><br>{pred}<extra></extra>',
+                showlegend=False
+            ))
+
+        fig.update_layout(
+            title=f"Multi-Algorithm Consensus: <b>{consensus}</b>",
+            title_font_color=consensus_color,
+            xaxis_title="Prediction Algorithm",
+            yaxis=dict(showticklabels=False, showgrid=False),
+            plot_bgcolor='rgba(250,250,250,0.5)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#2c3e50'),
+            height=400,
+            barmode='group'
+        )
+
+        # Add consensus annotation
+        fig.add_annotation(
+            text=f"Agreement: {len([s for s in impact_scores if s >= 1])}/{len(impact_scores)} predict damaging",
+            xref="paper", yref="paper",
+            x=0.5, y=-0.15,
+            showarrow=False,
+            font=dict(size=11, color='#5c6370')
+        )
+
+        return fig
+
+    return None
 
 # Search functionality
 if search_button and variant_id:
@@ -432,7 +539,7 @@ if search_button and variant_id:
                     if data['ensembl']:
                         ens = data['ensembl']
                         st.divider()
-                        st.markdown("### Genomic Context (Ensembl)")
+                        st.markdown("### Genomic Context")
 
                         col1, col2, col3 = st.columns(3)
 
@@ -454,7 +561,7 @@ if search_button and variant_id:
 
                         # Clinical significance from Ensembl
                         if ens['clinical_significance']:
-                            with st.expander("Clinical Significance (Ensembl)"):
+                            with st.expander("Clinical Significance"):
                                 for sig in ens['clinical_significance']:
                                     st.write(f"- {sig}")
                 
@@ -486,10 +593,10 @@ if search_button and variant_id:
                             st.info("No frequency data available")
                     
                     with col2:
-                        st.markdown("### Annotation Completeness")
-                        quality_chart = create_annotation_quality_chart(fv)
-                        if quality_chart:
-                            st.plotly_chart(quality_chart, use_container_width=True)
+                        st.markdown("### Algorithm Consensus")
+                        impact_chart = create_variant_impact_chart(fv)
+                        if impact_chart:
+                            st.plotly_chart(impact_chart, use_container_width=True)
                 
                 else:
                     st.warning("No data available for visualizations")

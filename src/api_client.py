@@ -7,11 +7,13 @@ class GeneticDataAPIClient:
     Client to fetch genetic variant data from public APIs:
     - FAVOR API: Comprehensive functional annotation
     - MyVariant.info: Additional annotation and clinical data
+    - Ensembl REST API: Genomic context and population data
     """
-    
+
     def __init__(self):
         self.favor_base = "https://api.genohub.org/v1"
         self.myvariant_base = "https://myvariant.info/v1"
+        self.ensembl_base = "https://rest.ensembl.org"
         self.timeout = 10
         
     def get_favor_data(self, rsid: str) -> Optional[Dict]:
@@ -141,13 +143,26 @@ class GeneticDataAPIClient:
         """Get variant data from Ensembl REST API"""
         try:
             url = f"{self.ensembl_base}/variation/human/{rsid}"
-            headers = {"Content-Type": "application/json"}
-            
+            # Ensembl requires proper headers for API access
+            headers = {
+                'Accept': 'application/json',
+                'User-Agent': 'GeneticDataExplorer/1.0 (Educational project; contact: student@university.edu)'
+            }
+
+            print(f"[DEBUG] Ensembl URL: {url}")
             response = requests.get(url, headers=headers, timeout=self.timeout)
-            
+            print(f"[DEBUG] Ensembl status code: {response.status_code}")
+
+            # Check for rate limiting (429 Too Many Requests)
+            if response.status_code == 429:
+                retry_after = response.headers.get('Retry-After', '60')
+                print(f"[ENSEMBL] Rate limited. Retry after {retry_after} seconds")
+                return None
+
             if response.status_code == 200:
                 data = response.json()
-                
+                print(f"[DEBUG] Ensembl data keys: {list(data.keys())[:10]}")
+
                 result = {
                     "variant_id": rsid,
                     "source": "Ensembl",
@@ -162,7 +177,7 @@ class GeneticDataAPIClient:
                     "mappings": [],
                     "raw_data": data
                 }
-                
+
                 mappings = data.get('mappings', [])
                 if mappings:
                     for mapping in mappings:
@@ -175,18 +190,19 @@ class GeneticDataAPIClient:
                             "assembly": mapping.get('assembly_name'),
                             "location": mapping.get('location')
                         })
-                
+
+                print(f"[DEBUG] Ensembl result successful with {len(result['mappings'])} mappings")
                 return result
-            
+
             elif response.status_code == 404:
-                print(f"Ensembl API: rsID {rsid} not found")
+                print(f"[ENSEMBL] rsID {rsid} not found (404)")
                 return None
             else:
-                print(f"Ensembl API error: {response.status_code}")
+                print(f"[ENSEMBL ERROR] Status {response.status_code}: {response.text[:200]}")
                 return None
-            
+
         except Exception as e:
-            print(f"Ensembl API exception: {e}")
+            print(f"[ENSEMBL EXCEPTION] {type(e).__name__}: {str(e)}")
             return None
     
 
