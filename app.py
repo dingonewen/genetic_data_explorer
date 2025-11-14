@@ -1,3 +1,4 @@
+
 import streamlit as st
 import sys
 import os
@@ -14,10 +15,118 @@ import plotly.express as px
 # Page configuration
 st.set_page_config(
     page_title="Genetic Data Explorer",
-    page_icon="🧬",
+    page_icon="🦠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Custom CSS for One Dark Atom theme
+st.markdown("""
+<style>
+    /* Global font - Consolas */
+    html, body, [class*="css"], .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6,
+    .stButton button, .stTextInput input, .stSelectbox, div, span {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+    }
+
+    /* Background color - Light grayish white */
+    .stApp {
+        background-color: #f5f5f5 !important;
+    }
+
+    /* Main content area */
+    .main .block-container {
+        background-color: #fafafa !important;
+    }
+
+    /* Sidebar background */
+    [data-testid="stSidebar"] {
+        background-color: #e8e8e8 !important;
+    }
+
+    /* Hide header anchor links */
+    .stMarkdown h1 a, .stMarkdown h2 a, .stMarkdown h3 a,
+    .stMarkdown h4 a, .stMarkdown h5 a, .stMarkdown h6 a {
+        display: none !important;
+    }
+
+    /* Hide ALL arrow icons - keyboard_double_arrow_right and keyboard_arrow_right */
+    [data-testid="StyledLinkIconContainer"],
+    [data-testid="collapsedControl"],
+    .stExpander [data-testid="StyledLinkIconContainer"],
+    .stExpander svg,
+    button[kind="header"] svg,
+    span[data-baseweb="icon"],
+    [data-testid="stSidebarNav"] button svg,
+    [data-testid="baseButton-header"] svg,
+    [data-testid="baseButton-headerNoPadding"] svg,
+    button[aria-label*="Collapse"] svg,
+    button[aria-label*="collapse"] svg,
+    .css-1kyxreq svg,
+    [class*="viewerBadge"],
+    details summary svg,
+    summary svg {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* One Dark Atom theme colors for headings */
+    .stMarkdown h1 {
+        color: #61afef !important;  /* Blue */
+        text-shadow: 0 0 10px #61afef, 0 0 20px #61afef80 !important;  /* Glowing effect */
+    }
+
+    /* Main title - Blue with glow */
+    h1 {
+        color: #61afef !important;
+        text-shadow: 0 0 10px #61afef, 0 0 20px #61afef80 !important;
+    }
+
+    .stMarkdown h2 {
+        color: #e06c75 !important;  /* Red */
+    }
+
+    .stMarkdown h3 {
+        color: #98c379 !important;  /* Green */
+    }
+
+    .stMarkdown h4 {
+        color: #e5c07b !important;  /* Yellow */
+    }
+
+    /* Tab text color */
+    .stTabs [data-baseweb="tab-list"] button {
+        color: #4a4a4a !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        color: #61afef !important;
+    }
+
+    /* Sidebar small caption text */
+    .sidebar-caption {
+        font-size: 0.75rem !important;
+        color: #5c6370 !important;
+        line-height: 1.2 !important;
+    }
+
+    /* Gene icon positioning */
+    .gene-icon {
+        position: fixed;
+        top: 20px;
+        right: 30px;
+        width: 80px;
+        height: 80px;
+        opacity: 0.7;
+        z-index: 999;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Add gene icon at top right
+st.markdown("""
+<img src="https://cdn-icons-png.flaticon.com/512/10004/10004916.png" class="gene-icon" alt="Gene Icon">
+""", unsafe_allow_html=True)
 
 # Initialize API client
 @st.cache_resource
@@ -43,24 +152,22 @@ use_real_api = st.sidebar.checkbox(
 
 if use_real_api:
     st.sidebar.success("Using Real APIs")
-    st.sidebar.caption("FAVOR + MyVariant.info")
 else:
     st.sidebar.info("Using Mock Data")
-    st.sidebar.caption("Local JSON files")
 
 # Sidebar - Data Sources
 st.sidebar.divider()
 st.sidebar.subheader("Data Sources")
 st.sidebar.markdown("""
-**FAVOR API**  
-Functional annotation, pathogenicity scores
+**[FAVOR API](https://docs.genohub.org/)**
+<span class="sidebar-caption">Functional annotation, pathogenicity scores</span>
 
-**MyVariant.info**  
-Clinical significance, disease associations
+**[MyVariant.info](https://myvariant.info/)**
+<span class="sidebar-caption">Clinical significance, disease associations</span>
 
-**Ensembl REST API**  
-Genomic coordinates, population frequencies
-""")
+**[Ensembl REST API](https://rest.ensembl.org/)**
+<span class="sidebar-caption">Genomic coordinates, population frequencies</span>
+""", unsafe_allow_html=True)
 
 # Sidebar - Stats
 st.sidebar.divider()
@@ -69,7 +176,7 @@ st.sidebar.metric("APIs Integrated", "3")  # Changed from 2 to 3
 st.sidebar.metric("Data Fields", "200+")   # Updated
 
 # Main search section
-st.subheader("Variant Search")
+st.subheader("Variant ID Search")
 
 # Search input
 col1, col2 = st.columns([4, 1])
@@ -302,46 +409,49 @@ if search_button and variant_id:
                     # Clinical data from MyVariant
                     if data['myvariant']:
                         mv = data['myvariant']
-                        st.divider()
-                        st.markdown("### Clinical Information")
-                        
-                        if mv['clinical_significance']:
-                            st.info(f"**Clinical Significance:** {mv['clinical_significance']}")
-                        
-                        if mv['diseases']:
-                            st.markdown("**Associated Diseases:**")
-                            for disease in mv['diseases']:
-                                st.markdown(f"- {disease}")
+
+                        # Only show Clinical Information section if there's actual ClinVar data
+                        if mv['clinical_significance'] or mv['diseases']:
+                            st.divider()
+                            st.markdown("### Clinical Information (ClinVar)")
+
+                            if mv['clinical_significance']:
+                                st.info(f"**Clinical Significance:** {mv['clinical_significance']}")
+
+                            if mv['diseases']:
+                                st.markdown("**Associated Diseases:**")
+                                for disease in mv['diseases']:
+                                    st.markdown(f"- {disease}")
 
                     # Add Ensembl data section
-                        if data['ensembl']:
-                            ens = data['ensembl']
-                            st.divider()
-                            st.markdown("### Genomic Context (Ensembl)")
-                            
-                            col1, col2, col3 = st.columns(3)
-                            
-                            with col1:
-                                st.metric("Variant Class", ens['var_class'] or "N/A")
-                            
-                            with col2:
-                                st.metric("Consequence", ens['most_severe_consequence'] or "N/A")
-                            
-                            with col3:
-                                if ens['mappings']:
-                                    location = ens['mappings'][0]['location']
-                                    st.metric("Location", location)
-                            
-                            # Evidence sources
-                            if ens['evidence']:
-                                st.markdown("**Evidence Sources:**")
-                                st.caption(", ".join(ens['evidence']))
-                            
-                            # Clinical significance from Ensembl
-                            if ens['clinical_significance']:
-                                with st.expander("Clinical Significance (Ensembl)"):
-                                    for sig in ens['clinical_significance']:
-                                        st.write(f"- {sig}")
+                    if data['ensembl']:
+                        ens = data['ensembl']
+                        st.divider()
+                        st.markdown("### Genomic Context (Ensembl)")
+
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            st.metric("Variant Class", ens['var_class'] or "N/A")
+
+                        with col2:
+                            st.metric("Consequence", ens['most_severe_consequence'] or "N/A")
+
+                        with col3:
+                            if ens['mappings']:
+                                location = ens['mappings'][0]['location']
+                                st.metric("Location", location)
+
+                        # Evidence sources
+                        if ens['evidence']:
+                            st.markdown("**Evidence Sources:**")
+                            st.caption(", ".join(ens['evidence']))
+
+                        # Clinical significance from Ensembl
+                        if ens['clinical_significance']:
+                            with st.expander("Clinical Significance (Ensembl)"):
+                                for sig in ens['clinical_significance']:
+                                    st.write(f"- {sig}")
                 
                 else:
                     st.warning("No data available for this variant")
@@ -416,8 +526,8 @@ if search_button and variant_id:
                             st.markdown("**Diseases:**")
                             for disease in mv['diseases']:
                                 st.markdown(f"- {disease}")
-            
-               # Add Ensembl detailed data
+
+                # Add Ensembl detailed data
                 if data['ensembl']:
                     ens = data['ensembl']
                     
@@ -532,4 +642,4 @@ if search_button and variant_id:
 
 # Footer
 st.divider()
-st.caption("Genetic Data Explorer | Data from FAVOR API & MyVariant.info")
+st.caption("Genetic Data Explorer | Data from FAVOR API & MyVariant.info & Ensembl")
