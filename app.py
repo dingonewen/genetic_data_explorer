@@ -1,4 +1,3 @@
-
 import streamlit as st
 import sys
 import os
@@ -15,7 +14,7 @@ import plotly.express as px
 # Page configuration
 st.set_page_config(
     page_title="Genetic Data Explorer",
-    page_icon="🦠",
+    page_icon="https://cdn-icons-png.flaticon.com/512/10004/10004916.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -44,13 +43,9 @@ st.markdown("""
         background-color: #e8e8e8 !important;
     }
 
-    /* Hide header anchor links */
-    .stMarkdown h1 a, .stMarkdown h2 a, .stMarkdown h3 a,
-    .stMarkdown h4 a, .stMarkdown h5 a, .stMarkdown h6 a {
-        display: none !important;
-    }
+            
 
-    /* Hide ALL arrow icons - keyboard_double_arrow_right and keyboard_arrow_right */
+
     [data-testid="StyledLinkIconContainer"],
     [data-testid="collapsedControl"],
     .stExpander [data-testid="StyledLinkIconContainer"],
@@ -73,13 +68,11 @@ st.markdown("""
     /* One Dark Atom theme colors for headings */
     .stMarkdown h1 {
         color: #61afef !important;  /* Blue */
-        text-shadow: 0 0 10px #61afef, 0 0 20px #61afef80 !important;  /* Glowing effect */
     }
 
-    /* Main title - Blue with glow */
+    /* Main title - Blue without glow */
     h1 {
         color: #61afef !important;
-        text-shadow: 0 0 10px #61afef, 0 0 20px #61afef80 !important;
     }
 
     .stMarkdown h2 {
@@ -110,15 +103,20 @@ st.markdown("""
         line-height: 1.2 !important;
     }
 
-    /* Gene icon positioning */
+    /* Gene icon positioning - next to main title */
     .gene-icon {
-        position: fixed;
-        top: 20px;
-        right: 30px;
-        width: 80px;
-        height: 80px;
+        position: absolute;
+        top: -20px;
+        right: 0px;
+        width: 180px;
+        height: 180px;
         opacity: 0.7;
         z-index: 999;
+    }
+
+    /* Make title container relative for icon positioning */
+    .main h1 {
+        position: relative;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -494,10 +492,8 @@ if search_button and variant_id:
             with tab3:
                 if data['favor']:
                     fv = data['favor']
-                    
-                    st.markdown("### FAVOR Annotation Details")
-                    
-                    with st.expander("View Complete FAVOR Data", expanded=False):
+
+                    with st.expander("FAVOR Annotation Details", expanded=False):
                         st.markdown(f"**Variant VCF:** `{fv['variant_vcf']}`")
                         st.markdown(f"**Chromosome:** {fv['chromosome']}")
                         st.markdown(f"**Position:** {fv['position']}")
@@ -514,10 +510,8 @@ if search_button and variant_id:
                 
                 if data['myvariant']:
                     mv = data['myvariant']
-                    
-                    st.markdown("### MyVariant.info Data")
-                    
-                    with st.expander("View MyVariant.info Data", expanded=False):
+
+                    with st.expander("MyVariant.info Data", expanded=False):
                         st.markdown(f"**Gene:** {mv['gene']}")
                         st.markdown(f"**Consequence:** {mv['consequence']}")
                         st.markdown(f"**CADD Score:** {mv['cadd_score']}")
@@ -530,10 +524,8 @@ if search_button and variant_id:
                 # Add Ensembl detailed data
                 if data['ensembl']:
                     ens = data['ensembl']
-                    
-                    st.markdown("### Ensembl Data")
-                    
-                    with st.expander("View Ensembl Data", expanded=False):
+
+                    with st.expander("Ensembl Data", expanded=False):
                         st.markdown(f"**Name:** {ens['name']}")
                         st.markdown(f"**Variant Class:** {ens['var_class']}")
                         st.markdown(f"**Most Severe Consequence:** {ens['most_severe_consequence']}")
