@@ -478,6 +478,24 @@ if search_button and variant_id:
         # Use Real API
         with st.spinner(f"Fetching data for {variant_id}..."):
             data = client.get_combined_data(variant_id)
+        # Show API data source status
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if data.get('favor'):
+                st.success("✓ FAVOR API")
+            else:
+                st.error("✗ FAVOR API")
+        with col2:
+            if data.get('myvariant'):
+                st.success("✓ MyVariant.info")
+            else:
+                st.error("✗ MyVariant.info")
+        with col3:
+            if data.get('ensembl'):
+                st.success("✓ Ensembl")
+            else:
+                st.error("✗ Ensembl")
+        st.divider()
 
         if data['success']:
             # Create tabs for organized display
