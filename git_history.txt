@@ -1,0 +1,20 @@
+*   3160623 - Merge branch 'main' of https://github.com/dingonewen/genetic_data_explorer (7 minutes ago) <dingonewen>
+|\  
+| * 1ab0295 - update screenshots (8 minutes ago) <dingonewen>
+* | e77ea2e - fix screenshots (7 minutes ago) <dingonewen>
+|/  
+* 2f20646 - add screenshots (11 minutes ago) <dingonewen>
+* f1555a3 - update UI & README (11 minutes ago) <dingonewen>
+* d4cfacd - Add new search feature (79 minutes ago) <dingonewen>
+* 3c7e54c - add bonus features (2 hours ago) <dingonewen>
+* 05caa6c - update pytest (3 hours ago) <dingonewen>
+* 3c4ac3b - update pytest (3 hours ago) <dingonewen>
+* d525d19 - fix their API access; update README (4 hours ago) <dingonewen>
+* 6b4cdc4 - before testing new API (4 hours ago) <dingonewen>
+* 3c8ac92 - update UI (5 hours ago) <dingonewen>
+* ab9f431 - adjust UI (5 hours ago) <dingonewen>
+* 16a8817 - Add Ensembl REST API integration (6 hours ago) <dingonewen>
+* 781cb0c - add interactive panels (7 hours ago) <dingonewen>
+* 5f510df - before integret public API (7 hours ago) <dingonewen>
+* fdcaeef - update project structure (9 hours ago) <dingonewen>
+* f86bc44 - init repo (11 hours ago) <dingonewen>
