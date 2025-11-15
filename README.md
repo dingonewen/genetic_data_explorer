@@ -1,3 +1,4 @@
+
 # Genetic Data Explorer
 
 A professional web-based application for comprehensive genetic variant analysis, integrating multiple public genomics APIs with interactive visualizations following ACMG clinical guidelines.
@@ -30,6 +31,13 @@ This application provides a unified interface for exploring genetic variants by:
 - **FAVOR API**: Functional annotation with 184+ data fields including conservation scores
 - **MyVariant.info**: Clinical significance from ClinVar and disease associations
 - **Ensembl REST API**: Genomic coordinates, variant consequences, and population frequencies
+
+### 🏥 Clinical Information Display
+- **ClinVar Clinical Significance**: Pathogenic, Likely Pathogenic, VUS, Benign classifications
+- **Associated Diseases**: Automatically fetched disease-variant associations from ClinVar
+  - Smart display: Shows first 3 diseases, expands for more
+  - Examples: Sickle cell disease (rs334), Breast cancer (BRCA1), Li-Fraumeni syndrome (TP53)
+- **Evidence Sources**: Database cross-references with expandable lists
 
 ### 💾 Data Export
 - JSON and CSV export for downstream analysis
@@ -760,11 +768,22 @@ else:                 color = red     # Highly Deleterious
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Author & Development
 
 **Yiwen Ding**
 - GitHub: [@dingonewen](https://github.com/dingonewen)
-- Project: Genetic Data Explorer
+- Project Lead & Designer
+
+**Key Contributions**:
+- Conceptualized and architected the genetic variant annotation system
+- Made all design decisions documented in "Design Journey & Trade-offs" section
+- Defined feature requirements: gene symbol search, ACMG visualizations, UI/UX improvements
+- Directed API selection strategy and integration approach
+- Established testing strategy and Docker deployment requirements
+
+**Development Approach**:
+Implementation developed with AI assistance (Claude by Anthropic) for code generation,
+debugging, and technical problem-solving under human direction and requirements specification.
 
 ---
 
@@ -776,10 +795,16 @@ MIT License - see LICENSE file for details
 
 ## 🙏 Acknowledgments
 
+**Data Sources & Standards**:
 - **FAVOR**: Functional annotation of variants online resource
 - **MyVariant.info**: Biothings API for variant annotations
 - **Ensembl**: EMBL-EBI genomics database
 - **ACMG**: Standards and guidelines for variant interpretation
+
+**Development Tools**:
+- **Claude (Anthropic)**: AI assistance for implementation and optimization
+- **Streamlit**: Interactive web application framework
+- **Plotly**: Data visualization library
 
 ---
 
