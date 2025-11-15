@@ -32,7 +32,7 @@ htmlcov/
 !README.md
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
 
 # OS
 .DS_Store

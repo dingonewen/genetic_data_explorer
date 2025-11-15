@@ -7,6 +7,7 @@ A professional web-based application for comprehensive genetic variant analysis,
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.0+-red.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
+**🚀 [Live Demo](https://geneticdataexplorer.streamlit.app/)**
 ---
 
 ## 🧬 Project Overview
@@ -46,6 +47,8 @@ This application provides a unified interface for exploring genetic variants by:
 ---
 
 ## 🚀 Quick Start
+
+**Try it now: [Live Demo](https://geneticdataexplorer.streamlit.app/)**
 
 ### Prerequisites
 - Python 3.8 or higher
@@ -98,7 +101,9 @@ The application will open automatically in your browser at `http://localhost:850
 
 ```
 genetic_data_explorer/
-├── app.py                  # Main Streamlit application
+├── .streamlit/            # Streamlit configuration
+│   └── config.toml        # Theme and server settings (light mode)
+├── app.py                 # Main Streamlit application
 ├── src/
 │   └── api_client.py      # API integration client
 ├── mock_data/             # Mock data for testing
@@ -112,7 +117,7 @@ genetic_data_explorer/
 ├── Dockerfile             # Docker container configuration
 ├── docker-compose.yml     # Docker Compose orchestration
 ├── .dockerignore          # Docker build exclusions
-└── README.md             # Documentation
+└── README.md              # Documentation
 ```
 
 ---
@@ -180,6 +185,11 @@ This project integrates **3 public REST APIs** that provide complementary geneti
 
 ---
 
+### Theme Configuration
+
+The application is configured to use light theme for all users via `.streamlit/config.toml`.
+To customize the theme, modify this file.
+
 ## 🎯 Usage Examples
 
 ### Example Commands
@@ -230,6 +240,10 @@ pytest test/test_api_client.py -v
 **Supported Gene Symbols:**
 - Predefined mappings: `APOE`, `BRCA1`, `BRCA2`, `TP53`, `CFTR`, `HBB`, `MTHFR`, `F5`, `HFE`, `LDLR`
 - API fallback for other gene symbols (requires MyVariant.info availability)
+
+## 🎥 Live Demo
+
+Experience the application: **[geneticdataexplorer.streamlit.app](https://geneticdataexplorer.streamlit.app/)**
 
 ### Screenshots
 

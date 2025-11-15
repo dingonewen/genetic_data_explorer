@@ -42,7 +42,7 @@ Thumbs.db
 .env
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
 
 # Data files (except mock data)
 *.csv
