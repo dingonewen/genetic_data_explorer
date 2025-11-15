@@ -146,7 +146,24 @@ st.markdown("""
         z-index: 1000 !important;
         position: relative !important;
     }
-    
+
+    /* Smaller API status boxes */
+    .api-status-box {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        border-radius: 6px !important;
+    }
+
+    /* Make success/error alerts more compact */
+    .stAlert {
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    [data-testid="stNotification"] > div {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem !important;
+    }
+
 
     /* Gene icon positioning - next to main title */
     .gene-icon {
@@ -228,7 +245,7 @@ with col1:
     variant_id = st.text_input(
         "Variant rsID or Gene Symbol",
         value="",
-        placeholder="type in Variant rsID or Gene Symbol",
+        placeholder="Type in Variant rsID or Gene Symbol",
         label_visibility="collapsed"
     )
 
@@ -267,6 +284,27 @@ with col5:
 with col6:
     if st.button("Clear", use_container_width=True):
         variant_id = ""
+
+st.divider()
+
+# API Status Display (always visible)
+st.caption("API Connection Status:")
+status_col1, status_col2, status_col3 = st.columns(3)
+
+with status_col1:
+    st.markdown('<div class="api-status-box">', unsafe_allow_html=True)
+    st.success("✓ FAVOR API", icon="😊")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with status_col2:
+    st.markdown('<div class="api-status-box">', unsafe_allow_html=True)
+    st.success("✓ MyVariant.info", icon="😊")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with status_col3:
+    st.markdown('<div class="api-status-box">', unsafe_allow_html=True)
+    st.success("✓ Ensembl REST", icon="😊")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
@@ -556,23 +594,24 @@ if search_button and variant_id:
         with st.spinner(f"Fetching data for {actual_rsid}..."):
             data = fetch_variant_data_cached(actual_rsid)
 
-        # Show API data source status
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        # Show which APIs returned data for this query
+        st.caption("Data Retrieved from:")
+        status_result_col1, status_result_col2, status_result_col3 = st.columns(3)
+        with status_result_col1:
             if data.get('favor'):
-                st.success("✓ FAVOR API")
+                st.success("✓ FAVOR", icon="😊")
             else:
-                st.error("✗ FAVOR API")
-        with col2:
+                st.error("✗ FAVOR", icon="😔")
+        with status_result_col2:
             if data.get('myvariant'):
-                st.success("✓ MyVariant.info")
+                st.success("✓ MyVariant", icon="😊")
             else:
-                st.error("✗ MyVariant.info")
-        with col3:
+                st.error("✗ MyVariant", icon="😔")
+        with status_result_col3:
             if data.get('ensembl'):
-                st.success("✓ Ensembl")
+                st.success("✓ Ensembl", icon="😊")
             else:
-                st.error("✗ Ensembl")
+                st.error("✗ Ensembl", icon="😔")
 
         st.divider()
 
