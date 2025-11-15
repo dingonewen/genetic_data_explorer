@@ -234,23 +234,23 @@ pytest test/test_api_client.py -v
 ### Screenshots
 
 **Main Interface with API Status Indicators**
-![Main Interface](screenshots/01_main_interface.png)
+![Main Interface](screenshots/01_main_interface.jpg)
 *Search interface with real-time API status indicators showing all three APIs active*
 
 **Overview Tab - Variant Annotations**
-![Overview Tab](screenshots/02_overview_tab.png)
+![Overview Tab](screenshots/02_overview_tab.jpg)
 *Comprehensive variant information including genomic location, gene, and allele frequencies*
 
 **Interactive Visualizations**
-![Visualizations](screenshots/03_visualizations.png)
+![Visualizations](screenshots/03_visualizations.jpg)
 *ACMG-compliant charts for pathogenicity, allele frequency, and algorithm consensus*
 
 **Detailed API Data**
-![Detailed Data](screenshots/04_detailed_data.png)
+![Detailed Data](screenshots/04_detailed_data.jpg)
 *Raw JSON responses from all three integrated APIs*
 
 **Data Export Options**
-![Export Options](screenshots/05_export_options.png)
+![Export Options](screenshots/05_export_options.jpg)
 *Download variant data in JSON or CSV formats for downstream analysis*
 
 ### Interpreting Results
